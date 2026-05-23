@@ -21,7 +21,7 @@ const Login = ({login}) =>{
       navigate('/profile')
       alert("Login exitoso")
     }else{
-      alert("Crendciales Incorrectas")
+      alert("Credenciales Incorrectas")
     }
 
   }
