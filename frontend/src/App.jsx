@@ -1,67 +1,83 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import { useState, useEffect } from "react";
-import Login from "./Views/Login";
-import Profile from "./Views/Profile";
-import Admin from "./Views/Admin";
-import ResponsiveAppBar from "./components/AppBar";
+import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import './App.css'
+import Login from './Views/Login'
+import Profile from './Views/Profile'
+import ResponsiveAppBar from './components/AppBar'
+import { useEffect, useState } from 'react'
+import Admin from './Views/Admin'
+
+const API_URL = "http://localhost:8000"
 
 function App() {
-  const [isLogged, setIsLogged] = useState(false);
-  const [currentUser, setCurrentUser] = useState(null);
-  const [users, setUsers] = useState([]);
+  const [isLogin, setIsLogin] = useState(false)
+  const [user, setUser] = useState({})
+  const [users, setUsers] = useState([])
+  const [token, setToken] = useState(null)
 
-  useEffect(() => {
-    if (isLogged) {
-      fetch("http://localhost:8000/users")
-        .then(res => res.json())
-        .then(data => setUsers(data));
+  useEffect(()=>{
+    if(isLogin){
+      const getUsers = async ()=>{
+        const res = await fetch(API_URL+"/users", {
+          headers: {"Authorization": `Bearer ${token}`}
+        })
+        const data = await res.json()
+        console.log(data)
+        setUsers(data)
+      }
+      getUsers()
     }
-  }, [isLogged]);
+  },[isLogin])
 
-  const login = async ({ username, password }) => {
-    const res = await fetch("http://localhost:8000/login", {
+  const login = async (user) => {
+    const res = await fetch(API_URL+"/login", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password }),
-    });
-    const data = await res.json();
-    if (data.login === true) {
-      setIsLogged(true);
-      setCurrentUser(data.user);
-    }
-    return data;
-  };
+      headers:{"content-type":"application/json"},
+      body: JSON.stringify(user)
+    })
+    const data = await res.json()
+    setIsLogin(data.login)
+    setUser(data.user)
+    setToken(data.token)
+    return data
+  }
 
-  const logout = () => {
-    setIsLogged(false);
-    setCurrentUser(null);
-  };
+  const delUser = async (id)=>{
+    setUsers(users.filter((u)=> u._id !== id))
+    await fetch(API_URL+"/users/"+id, {
+      method: "DELETE",
+      headers: {"Authorization": `Bearer ${token}`}
+    })
+  }
 
-  const addUser = async ({ name, username, password }) => {
-    const res = await fetch("http://localhost:8000/users", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, username, password }),
-    });
-    const data = await res.json();
-    setUsers([...users, data.user]);
-  };
+  const addUser = async (newUser)=>{
+    const res = await fetch(API_URL+"/users", {
+      method: "post",
+      headers:{
+        "content-type":"application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify(newUser)
+    })
+    const data = await res.json()
+    setUsers([...users, data.users])
+  }
 
-  const delUser = async (id) => {
-    await fetch(`http://localhost:8000/users/${id}`, { method: "DELETE" });
-    setUsers(users.filter(u => u._id !== id));
-  };
+  const logout = ()=>{
+    setIsLogin(false)
+    setUser({})
+    setToken(null)
+  }
 
   return (
-    <Router>
-      {isLogged && <ResponsiveAppBar logout={logout} />}
+    <BrowserRouter>
+      {isLogin && <ResponsiveAppBar logout={logout} />}
       <Routes>
-        <Route path="/" element={<Login login={login} />} />
-        <Route path="/profile" element={<Profile user={currentUser} />} />
-        <Route path="/Admin" element={<Admin users={users} delUser={delUser} addUser={addUser} />} />
+        <Route path='/' element={<Login login={login} />} />
+        <Route path='/profile' element={<Profile user={user} />} />
+        <Route path='/Admin' element={<Admin addUser={addUser} users={users} delUser={delUser} />} />
       </Routes>
-    </Router>
-  );
+    </BrowserRouter>
+  )
 }
 
-export default App;
+export default App
